@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Mapa Interactivo – Tendencia de Temperatura</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: column; /* apilado vertical */
+      height: 100%;
+    }
+    #map {
+      flex: 7;           /* 70% de la altura */
+      min-height: 300px; /* evita que quede demasiado pequeño */
+    }
+    #chart-container {
+      flex: 3;           /* 30% de la altura */
+      padding: 10px;
+      background: #fff;
+      border-top: 3px solid #007acc;
+      box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #chart-container h3 {
+      margin: 0 0 8px;
+      font-size: 1.1em;
+    }
+    /* Hace que el canvas llene todo el contenedor restante */
+    #chart-container canvas {
+      flex: 1;
+    }
+    /* Leyenda de pendiente */
+    .info.legend {
+      background: white;
+      padding: 6px 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      font-size: 12px;
+      line-height: 18px;
+    }
+    .info.legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="chart-container">
+    <h3 id="chart-title">Selecciona un estado</h3>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // 1) Basemap CartoDB Voyager
+    const map = L.map('map').setView([23.0, -102.0], 5);
+    L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19
+      }
+    ).addTo(map);
+
+    // 2) Función de color según tramo de pendiente
+    function getColor(d) {
+      return d >  0.05 ? '#800026' :
+             d >  0.03 ? '#BD0026' :
+             d >  0.01 ? '#E31A1C' :
+             d >  0    ? '#FC4E2A' :
+             d > -0.01 ? '#FD8D3C' :
+             d > -0.03 ? '#FEB24C' :
+                         '#FFEDA0';
+    }
+
+    // 3) Hover & click handlers
+    function highlightFeature(e) {
+      const layer = e.target;
+      layer.setStyle({ weight:3, color:'#666', fillOpacity:0.9 });
+      layer.bringToFront();
+    }
+    function resetHighlight(e) {
+      geojsonLayer.resetStyle(e.target);
+    }
+    function zoomToFeature(e) {
+      map.fitBounds(e.target.getBounds());
+    }
+
+    // 4) Configura Chart.js: línea negra y puntos grises
+const ctx = document.getElementById('chart').getContext('2d');
+let trendChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      label: '',
+      data: [],
+      borderColor: '#000000',            // línea negra
+      backgroundColor: 'rgba(0,0,0,0)',  // sin relleno bajo la curva
+      pointBackgroundColor: '#777777',   // puntos grises
+      pointBorderColor: '#000000',       // borde de puntos negro
+      pointRadius: 5,
+      tension: 0.3,
+      fill: false                        // desactivar relleno
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      title:  { display: false },
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.parsed.y.toFixed(2)} °C`
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Año' },
+        grid:  { color: '#f0f0f0' }
+      },
+      y: {
+        title: { display: true, text: 'Temperatura (°C)' },
+        grid:  { color: '#f0f0f0' }
+      }
+    }
+  }
+});
+
+
+    // 5) Carga y dibuja GeoJSON + leyenda
+    let geojsonLayer;
+    fetch('trends.json')
+      .then(res => res.json())
+      .then(geojson => {
+        geojsonLayer = L.geoJSON(geojson, {
+          style: feature => ({
+            fillColor: getColor(feature.properties.slope),
+            weight: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7
+          }),
+          onEachFeature: (feature, layer) => {
+            layer.bindPopup(
+              `<strong>${feature.properties.name}</strong><br>` +
+              `Pendiente: ${feature.properties.slope.toFixed(3)} °C/año`
+            );
+            layer.on({
+              mouseover: highlightFeature,
+              mouseout:  resetHighlight,
+              click:     e => {
+                zoomToFeature(e);
+                const serie  = feature.properties.series;
+                const years  = serie.map(d => d.year);
+                const values = serie.map(d => d.value);
+
+                trendChart.data.labels            = years;
+                trendChart.data.datasets[0].data = values;
+                trendChart.update();
+
+                document.getElementById('chart-title')
+                        .textContent = feature.properties.name;
+              }
+            });
+          }
+        }).addTo(map);
+
+        // Agrega leyenda de gradientes
+        const legend = L.control({position: 'bottomright'});
+        legend.onAdd = () => {
+          const div = L.DomUtil.create('div','info legend');
+          const grades = [-0.03, -0.01, 0, 0.01, 0.03, 0.05];
+          const labels = grades.map((from, i) => {
+            const to = grades[i+1];
+            return `
+              <i style="background:${getColor(from + 1e-4)}"></i>
+              ${from}${to ? '&ndash;'+to : '+'}
+            `;
+          });
+          div.innerHTML = labels.join('<br>');
+          return div;
+        };
+        legend.addTo(map);
+      })
+      .catch(err => console.error('Error cargando trends.json:', err));
+  </script>
+</body>
+</html>
+
