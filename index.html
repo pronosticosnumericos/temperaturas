@@ -2,27 +2,40 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Mapa Interactivo – Tendencia de Temperatura</title>
+  <title>Mapa Interactivo – Tendencia de Temperatura (CPC)</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body {
-      height: 100%;
+      height: 100vh;
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, sans-serif;
     }
     body {
       display: flex;
-      flex-direction: column; /* apilado vertical */
-      height: 100%;
+      flex-direction: column; /* vertical: menú, mapa, gráfica */
     }
+    /* Menú superior */
+    #menu {
+      padding: 8px 12px;
+      background: #f8f8f8;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #menu label {
+      font-weight: bold;
+    }
+    /* Contenedor del mapa */
     #map {
-      flex: 7;           /* 70% de la altura */
-      min-height: 300px; /* evita que quede demasiado pequeño */
+      flex: 7;           /* 70% de la altura restante */
+      min-height: 300px; /* en pantallas pequeñas */
     }
+    /* Panel de gráfica debajo */
     #chart-container {
-      flex: 3;           /* 30% de la altura */
+      flex: 3;           /* 30% de la altura restante */
       padding: 10px;
       background: #fff;
       border-top: 3px solid #007acc;
@@ -35,11 +48,10 @@
       margin: 0 0 8px;
       font-size: 1.1em;
     }
-    /* Hace que el canvas llene todo el contenedor restante */
     #chart-container canvas {
-      flex: 1;
+      flex: 1;           /* ocupa todo el espacio libre */
     }
-    /* Leyenda de pendiente */
+    /* Leyenda de pendientes */
     .info.legend {
       background: white;
       padding: 6px 8px;
@@ -57,7 +69,20 @@
   </style>
 </head>
 <body>
+
+  <!-- Menú para elegir variable -->
+  <div id="menu">
+    <label for="variable-select">Variable:</label>
+    <select id="variable-select">
+      <option value="tmax">Temperatura Máxima</option>
+      <option value="tmin">Temperatura Mínima</option>
+    </select>
+  </div>
+
+  <!-- Mapa -->
   <div id="map"></div>
+
+  <!-- Panel de gráfica -->
   <div id="chart-container">
     <h3 id="chart-title">Selecciona un estado</h3>
     <canvas id="chart"></canvas>
@@ -67,9 +92,10 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <script>
-    // 1) Basemap CartoDB Voyager
+    // ——————————————
+    // 1) Inicializa el mapa
+    // ——————————————
     const map = L.map('map').setView([23.0, -102.0], 5);
     L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
@@ -80,7 +106,7 @@
       }
     ).addTo(map);
 
-    // 2) Función de color según tramo de pendiente
+    // Función de color según pendiente
     function getColor(d) {
       return d >  0.05 ? '#800026' :
              d >  0.03 ? '#BD0026' :
@@ -91,7 +117,7 @@
                          '#FFEDA0';
     }
 
-    // 3) Hover & click handlers
+    // Handlers de hover y click
     function highlightFeature(e) {
       const layer = e.target;
       layer.setStyle({ weight:3, color:'#666', fillOpacity:0.9 });
@@ -104,107 +130,131 @@
       map.fitBounds(e.target.getBounds());
     }
 
-    // 4) Configura Chart.js: línea negra y puntos grises
-const ctx = document.getElementById('chart').getContext('2d');
-let trendChart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [{
-      label: '',
-      data: [],
-      borderColor: '#000000',            // línea negra
-      backgroundColor: 'rgba(0,0,0,0)',  // sin relleno bajo la curva
-      pointBackgroundColor: '#777777',   // puntos grises
-      pointBorderColor: '#000000',       // borde de puntos negro
-      pointRadius: 5,
-      tension: 0.3,
-      fill: false                        // desactivar relleno
-    }]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      title:  { display: false },
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: ctx => ` ${ctx.parsed.y.toFixed(2)} °C`
+    // ——————————————
+    // 2) Prepara Chart.js (línea negra, puntos grises)
+    // ——————————————
+    const ctx = document.getElementById('chart').getContext('2d');
+    let trendChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{
+        label: '',
+        data: [],
+        borderColor: '#000000',
+        backgroundColor: 'rgba(0,0,0,0)',
+        pointBackgroundColor: '#777777',
+        pointBorderColor: '#000000',
+        pointRadius: 5,
+        tension: 0.3,
+        fill: false
+      }]},
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title:  { display: false },
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.parsed.y.toFixed(2)} °C`
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Año' },
+            grid:  { color: '#f0f0f0' }
+          },
+          y: {
+            title: { display: true, text: 'Temperatura (°C)' },
+            grid:  { color: '#f0f0f0' }
+          }
         }
       }
-    },
-    scales: {
-      x: {
-        title: { display: true, text: 'Año' },
-        grid:  { color: '#f0f0f0' }
-      },
-      y: {
-        title: { display: true, text: 'Temperatura (°C)' },
-        grid:  { color: '#f0f0f0' }
+    });
+
+    // variable global para la capa geoJSON
+    let geojsonLayer = null;
+    let legendControl = null;
+
+    // ——————————————
+    // 3) Función para (re)cargar el JSON según variable
+    // ——————————————
+    function loadData() {
+      const varp = document.getElementById('variable-select').value;  // "tmax" o "tmin"
+      const file = `trends_cpc_${varp}.json`;
+
+      // quita capa previa
+      if (geojsonLayer) {
+        map.removeLayer(geojsonLayer);
       }
-    }
-  }
-});
+      // quita leyenda previa
+      if (legendControl) {
+        map.removeControl(legendControl);
+        legendControl = null;
+      }
 
+      fetch(file)
+        .then(r => r.json())
+        .then(geojson => {
+          // añade capa nueva
+          geojsonLayer = L.geoJSON(geojson, {
+            style: f => ({
+              fillColor:   getColor(f.properties.slope),
+              weight:      1,
+              color:       'white',
+              dashArray:   '3',
+              fillOpacity: 0.7
+            }),
+            onEachFeature: (feature, layer) => {
+              layer.bindPopup(
+                `<strong>${feature.properties.name}</strong><br>` +
+                `Pendiente: ${feature.properties.slope.toFixed(3)} °C/año`
+              );
+              layer.on({
+                mouseover: highlightFeature,
+                mouseout:  resetHighlight,
+                click:     e => {
+                  zoomToFeature(e);
+                  const s = feature.properties.series;
+                  trendChart.data.labels            = s.map(d=>d.year);
+                  trendChart.data.datasets[0].data = s.map(d=>d.value);
+                  trendChart.update();
+                  document.getElementById('chart-title')
+                          .textContent = feature.properties.name;
+                }
+              });
+            }
+          }).addTo(map);
 
-    // 5) Carga y dibuja GeoJSON + leyenda
-    let geojsonLayer;
-    fetch('trends.json')
-      .then(res => res.json())
-      .then(geojson => {
-        geojsonLayer = L.geoJSON(geojson, {
-          style: feature => ({
-            fillColor: getColor(feature.properties.slope),
-            weight: 1,
-            color: 'white',
-            dashArray: '3',
-            fillOpacity: 0.7
-          }),
-          onEachFeature: (feature, layer) => {
-            layer.bindPopup(
-              `<strong>${feature.properties.name}</strong><br>` +
-              `Pendiente: ${feature.properties.slope.toFixed(3)} °C/año`
-            );
-            layer.on({
-              mouseover: highlightFeature,
-              mouseout:  resetHighlight,
-              click:     e => {
-                zoomToFeature(e);
-                const serie  = feature.properties.series;
-                const years  = serie.map(d => d.year);
-                const values = serie.map(d => d.value);
+          // restablece vista inicial
+          map.setView([23.0, -102.0], 5);
 
-                trendChart.data.labels            = years;
-                trendChart.data.datasets[0].data = values;
-                trendChart.update();
-
-                document.getElementById('chart-title')
-                        .textContent = feature.properties.name;
-              }
+          // añade leyenda
+          legendControl = L.control({position:'bottomright'});
+          legendControl.onAdd = () => {
+            const div = L.DomUtil.create('div','info legend');
+            const grades = [-0.03,-0.01,0,0.01,0.03,0.05];
+            const labels = grades.map((g,i) => {
+              const to = grades[i+1];
+              return `<i style="background:${getColor(g+1e-4)}"></i> ${
+                g}${to? '–'+to : '+'}`;
             });
-          }
-        }).addTo(map);
+            div.innerHTML = labels.join('<br>');
+            return div;
+          };
+          legendControl.addTo(map);
+        })
+        .catch(err => console.error('Error cargando', file, err));
+    }
 
-        // Agrega leyenda de gradientes
-        const legend = L.control({position: 'bottomright'});
-        legend.onAdd = () => {
-          const div = L.DomUtil.create('div','info legend');
-          const grades = [-0.03, -0.01, 0, 0.01, 0.03, 0.05];
-          const labels = grades.map((from, i) => {
-            const to = grades[i+1];
-            return `
-              <i style="background:${getColor(from + 1e-4)}"></i>
-              ${from}${to ? '&ndash;'+to : '+'}
-            `;
-          });
-          div.innerHTML = labels.join('<br>');
-          return div;
-        };
-        legend.addTo(map);
-      })
-      .catch(err => console.error('Error cargando trends.json:', err));
+    // ——————————————
+    // 4) Evento y carga inicial
+    // ——————————————
+    document.getElementById('variable-select')
+            .addEventListener('change', loadData);
+    loadData();
   </script>
+
 </body>
 </html>
 
