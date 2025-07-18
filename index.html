@@ -13,39 +13,67 @@
   />
 
   <style>
-    html, body { height:100vh; margin:0; font-family:sans-serif; }
+    html, body { height:100vh; margin:0; font-family: sans-serif; }
     body { display:flex; flex-direction:column; }
     #menu {
-      padding:8px;
-      background:#f8f8f8;
-      border-bottom:1px solid #ddd;
-      display:flex; gap:12px; align-items:center;
+      padding:10px;
+      background:#f5f5f5;
+      border-bottom:1px solid #ccc;
+      display:flex;
+      gap:16px;
+      align-items:center;
     }
-    #menu label { font-weight:bold; }
-    #map { flex:7; min-height:200px; }
+    #menu label { font-weight:600; color:#333; }
+    #map { flex:7; }
     #chart-container {
       flex:3;
-      padding:10px;
+      padding:16px;
       background:#fff;
-      border-top:3px solid #007acc;
-      box-shadow:0 -2px 5px rgba(0,0,0,0.1);
-      display:flex; flex-direction:column; overflow:hidden;
+      border-top:4px solid #007acc;
+      box-shadow:0 -2px 6px rgba(0,0,0,0.1);
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
     }
-    #chart-container h3 { margin:0 0 8px; font-size:1.1em; }
+    #chart-container h3 {
+      margin:0 0 12px;
+      font-size:1.2em;
+      font-weight:600;
+      color:#007acc;
+      text-align:center;
+    }
     #chart-container canvas { flex:1; }
     .info.legend {
-      background:white; padding:6px 8px;
-      box-shadow:0 0 15px rgba(0,0,0,0.2);
-      font-size:12px;
+      background:white;
+      padding:8px 12px;
+      box-shadow:0 0 15px rgba(0,0,0,0.15);
+      font-size:13px;
+      line-height:1.2;
     }
-    .info.legend h4 { margin:0 0 4px; font-size:14px; }
+    .info.legend h4 {
+      margin:0 0 6px;
+      font-size:15px;
+      font-weight:600;
+      color:#333;
+    }
     .gradient-bar {
-      width:200px; height:10px;
-      background:linear-gradient(to right, #3182bd 0%, #fff 50%, #de2d26 100%);
-      margin-bottom:4px;
+      width:220px;
+      height:10px;
+      background:linear-gradient(
+        to right,
+        #3182bd 0%,
+        #fff 50%,
+        #de2d26 100%
+      );
+      margin-bottom:6px;
+      border:1px solid #aaa;
     }
     .legend-labels {
-      display:flex; justify-content:space-between; width:200px;
+      display:flex;
+      justify-content:space-between;
+      width:220px;
+      font-size:12px;
+      color:#333;
     }
   </style>
 </head>
@@ -82,20 +110,20 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
-    // === Paso 2: caché simple para no recargar JSON repetido ===
+    // —————— Paso 2: Caché simple para JSON ——————
     const cache = {};
     function fetchOnce(url) {
       if (!cache[url]) {
         cache[url] = fetch(url)
           .then(resp => {
-            if (!resp.ok) throw new Error(`Error ${resp.status} al cargar ${url}`);
+            if (!resp.ok) throw new Error(`Error ${resp.status} cargando ${url}`);
             return resp.json();
           });
       }
       return cache[url];
     }
 
-    // 1) Inicializa el mapa centrado en México y añade OSM como base
+    // —————— Inicializa Leaflet ——————
     const mexicoBounds = [[14.5, -118.5], [32.7, -86.7]];
     const map = L.map('map', {
       maxBounds: mexicoBounds,
@@ -108,42 +136,61 @@
       maxZoom: 19
     }).addTo(map);
 
-    // 2) Configura Chart.js
+    // —————— Configuración “profesional” de Chart.js ——————
     const ctx = document.getElementById('chart').getContext('2d');
     let trendChart = new Chart(ctx, {
       type: 'line',
-      data: { labels: [], datasets: [{
-        label: '',
-        data: [],
-        borderColor: '#000',
-        backgroundColor: 'rgba(0,0,0,0)',
-        pointBackgroundColor: '#777',
-        pointBorderColor: '#000',
-        pointRadius: 5,
-        tension: 0.3,
-        fill: false
-      }]},
+      data: { labels: [], datasets: [] },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: { padding: { top:20, right:20, bottom:10, left:10 }},
         plugins: {
-          title: { display: false },
-          legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(2)} °C` } }
+          title: {
+            display: true,
+            text: '',
+            font: { size: 16, weight: '600' },
+            padding: { bottom: 10 }
+          },
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: { usePointStyle: true, padding: 16 }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            padding: 8,
+            titleFont: { size: 14 },
+            bodyFont: { size: 13 }
+          }
         },
+        interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { title: { display: true, text: 'Periodo' }, grid: { color: '#f0f0f0' } },
-          y: { title: { display: true, text: 'Temperatura (°C)' }, grid: { color: '#f0f0f0' } }
-        }
+          x: {
+            title: { display: true, text: 'Periodo', font: { size:14, weight:'500' }},
+            ticks: { maxRotation:0, autoSkip:true, maxTicksLimit:12 },
+            grid: { color: '#ececec' }
+          },
+          y: {
+            title: { display: true, text: 'Temperatura (°C)', font: { size:14, weight:'500' }},
+            ticks: {
+              callback: v => `${v.toFixed(1)}°C`,
+              color: '#333'
+            },
+            grid: { color: '#ececec' }
+          }
+        },
+        animation: { duration: 600 }
       }
     });
 
     let geojsonLayer, legendControl;
 
-    // 3) Función para recargar según selecciones
+    // —————— Función para recargar mapa y gráfica ——————
     function loadData() {
-      const v = document.getElementById('variable-select').value;
-      const a = document.getElementById('agg-select').value;
+      const v = document.getElementById('variable-select').value;   // tmax/tmin
+      const a = document.getElementById('agg-select').value;       // annual/monthly
       const file = `trends_cpc_${v}_${a}.json`;
 
       if (geojsonLayer) map.removeLayer(geojsonLayer);
@@ -151,13 +198,14 @@
 
       fetchOnce(file)
         .then(data => {
+          // Dibuja polígonos con gradiente continuo
           geojsonLayer = L.geoJSON(data, {
             style: f => ({
               fillColor: getColor(f.properties.slope),
-              color: 'white',
+              color: '#fff',
               weight: 1,
-              dashArray: '3',
-              fillOpacity: 0.7
+              dashArray: '2',
+              fillOpacity: 0.8
             }),
             onEachFeature: (f, layer) => {
               layer.bindPopup(
@@ -166,40 +214,52 @@
               );
               layer.on({
                 mouseover: e => {
-                  e.target.setStyle({ weight: 3, color: '#666', fillOpacity: 0.9 });
+                  e.target.setStyle({ weight:2.5, color:'#333', fillOpacity:0.9 });
                   e.target.bringToFront();
                 },
                 mouseout: e => geojsonLayer.resetStyle(e.target),
                 click: e => {
                   map.fitBounds(e.target.getBounds());
                   const s = f.properties.series;
-                  const xs = s.map(d=>d.period);
-                  const ys = s.map(d=>d.value);
-                  const idx = ys.map((_,i)=>i);
-                  const lr = linregress(idx, ys);
-                  const trend = idx.map(i=>lr.intercept+lr.slope*i);
+                  const xs = s.map(d => d.period);
+                  const ys = s.map(d => d.value);
+                  const idx = ys.map((_,i) => i);
+                  const lr  = linregress(idx, ys);
+                  const trend = idx.map(i => lr.intercept + lr.slope * i);
 
+                  // Datos y configuración de la gráfica
                   trendChart.data.labels = xs;
                   trendChart.data.datasets = [
-                    { label:'Valor', data:ys, borderColor:'#000',
-                      backgroundColor:'rgba(0,0,0,0)',
-                      pointBackgroundColor:'#777', pointBorderColor:'#000',
-                      pointRadius:5, tension:0.3, fill:false
+                    {
+                      label: 'Valor',
+                      data: ys,
+                      borderColor: '#007acc',
+                      backgroundColor: 'rgba(0,122,204,0.1)',
+                      pointBackgroundColor: '#fff',
+                      pointBorderColor: '#007acc',
+                      pointRadius: 4,
+                      tension: 0.2,
+                      fill: true
                     },
-                    { label:'Tendencia', data:trend,
-                      borderColor:'#de2d26', borderDash:[5,5],
-                      pointRadius:0, fill:false
+                    {
+                      label: 'Tendencia',
+                      data: trend,
+                      borderColor: '#de2d26',
+                      borderDash: [6,4],
+                      pointRadius: 0,
+                      fill: false
                     }
                   ];
-                  trendChart.options.plugins.legend.display = true;
+                  trendChart.options.plugins.title.text =
+                    `${f.properties.name} – ${v.toUpperCase()} ${a==='annual'?'Anual':'Mensual'}`;
                   trendChart.update();
-                  document.getElementById('chart-title').textContent = f.properties.name;
                 }
               });
             }
           }).addTo(map);
 
-          // Leyenda continua
+          // Ajusta límites y añade leyenda de colores
+          map.fitBounds(mexicoBounds);
           legendControl = L.control({ position:'bottomright' });
           legendControl.onAdd = () => {
             const div = L.DomUtil.create('div','info legend');
@@ -218,11 +278,11 @@
         .catch(err => console.error('Error cargando JSON:', err));
     }
 
-    // Helpers de color y regresión lineal en JS
+    // —————— Helpers ——————
     const MIN = -0.05, MAX = 0.05;
     function getColor(d) {
-      let t = Math.min(Math.max((d-MIN)/(MAX-MIN),0),1);
-      if (t<0.5) {
+      let t = Math.min(Math.max((d - MIN)/(MAX - MIN), 0), 1);
+      if (t < 0.5) {
         let u = t/0.5;
         return `rgb(${Math.round(0x31+u*(255-0x31))},${Math.round(0x82+u*(255-0x82))},${Math.round(0xbd+u*(255-0xbd))})`;
       } else {
@@ -231,18 +291,21 @@
       }
     }
     function linregress(x,y) {
-      const n=x.length, mx=x.reduce((a,b)=>a+b)/n, my=y.reduce((a,b)=>a+b)/n;
+      const n = x.length;
+      const mx = x.reduce((a,b)=>a+b)/n;
+      const my = y.reduce((a,b)=>a+b)/n;
       let num=0, den=0;
-      for(let i=0;i<n;i++){ num+=(x[i]-mx)*(y[i]-my); den+=(x[i]-mx)**2; }
+      for(let i=0;i<n;i++){
+        num += (x[i]-mx)*(y[i]-my);
+        den += (x[i]-mx)**2;
+      }
       const slope = num/den;
       return { slope, intercept: my - slope*mx };
     }
 
-    // Event listeners
+    // —————— Eventos y carga inicial ——————
     document.getElementById('variable-select').addEventListener('change', loadData);
-    document.getElementById('agg-select').addEventListener('change', loadData);
-
-    // Carga inicial
+    document.getElementById('agg-select')    .addEventListener('change', loadData);
     loadData();
   </script>
 </body>
