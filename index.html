@@ -82,6 +82,19 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script>
+    // === Paso 2: caché simple para no recargar JSON repetido ===
+    const cache = {};
+    function fetchOnce(url) {
+      if (!cache[url]) {
+        cache[url] = fetch(url)
+          .then(resp => {
+            if (!resp.ok) throw new Error(`Error ${resp.status} al cargar ${url}`);
+            return resp.json();
+          });
+      }
+      return cache[url];
+    }
+
     // 1) Inicializa el mapa centrado en México y añade OSM como base
     const mexicoBounds = [[14.5, -118.5], [32.7, -86.7]];
     const map = L.map('map', {
@@ -90,7 +103,6 @@
       minZoom: 5
     }).setView([23.0, -102.0], 5);
 
-    // Capa base OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap',
       maxZoom: 19
@@ -117,7 +129,7 @@
         plugins: {
           title: { display: false },
           legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(2)} °C`} }
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(2)} °C` } }
         },
         scales: {
           x: { title: { display: true, text: 'Periodo' }, grid: { color: '#f0f0f0' } },
@@ -128,7 +140,7 @@
 
     let geojsonLayer, legendControl;
 
-    // 3) Recarga el GeoJSON según las selecciones
+    // 3) Función para recargar según selecciones
     function loadData() {
       const v = document.getElementById('variable-select').value;
       const a = document.getElementById('agg-select').value;
@@ -137,8 +149,7 @@
       if (geojsonLayer) map.removeLayer(geojsonLayer);
       if (legendControl) map.removeControl(legendControl);
 
-      fetch(file)
-        .then(r => r.json())
+      fetchOnce(file)
         .then(data => {
           geojsonLayer = L.geoJSON(data, {
             style: f => ({
@@ -188,7 +199,7 @@
             }
           }).addTo(map);
 
-          // Leyenda de colores
+          // Leyenda continua
           legendControl = L.control({ position:'bottomright' });
           legendControl.onAdd = () => {
             const div = L.DomUtil.create('div','info legend');
@@ -207,7 +218,7 @@
         .catch(err => console.error('Error cargando JSON:', err));
     }
 
-    // Helpers
+    // Helpers de color y regresión lineal en JS
     const MIN = -0.05, MAX = 0.05;
     function getColor(d) {
       let t = Math.min(Math.max((d-MIN)/(MAX-MIN),0),1);
@@ -227,7 +238,7 @@
       return { slope, intercept: my - slope*mx };
     }
 
-    // Listeners
+    // Event listeners
     document.getElementById('variable-select').addEventListener('change', loadData);
     document.getElementById('agg-select').addEventListener('change', loadData);
 
