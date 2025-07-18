@@ -16,64 +16,39 @@
     html, body { height:100vh; margin:0; font-family: sans-serif; }
     body { display:flex; flex-direction:column; }
     #menu {
-      padding:10px;
-      background:#f5f5f5;
-      border-bottom:1px solid #ccc;
-      display:flex;
-      gap:16px;
-      align-items:center;
+      padding:10px; background:#f5f5f5; border-bottom:1px solid #ccc;
+      display:flex; gap:16px; align-items:center;
     }
     #menu label { font-weight:600; color:#333; }
     #map { flex:7; }
     #chart-container {
-      flex:3;
-      padding:16px;
-      background:#fff;
+      flex:3; padding:16px; background:#fff;
       border-top:4px solid #007acc;
       box-shadow:0 -2px 6px rgba(0,0,0,0.1);
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
+      display:flex; flex-direction:column; overflow:hidden;
     }
     #chart-container h3 {
-      margin:0 0 12px;
-      font-size:1.2em;
-      font-weight:600;
-      color:#007acc;
-      text-align:center;
+      margin:0 0 12px; font-size:1.2em; font-weight:600;
+      color:#007acc; text-align:center;
     }
     #chart-container canvas { flex:1; }
     .info.legend {
-      background:white;
-      padding:8px 12px;
+      background:white; padding:8px 12px;
       box-shadow:0 0 15px rgba(0,0,0,0.15);
-      font-size:13px;
-      line-height:1.2;
+      font-size:13px; line-height:1.2;
     }
     .info.legend h4 {
-      margin:0 0 6px;
-      font-size:15px;
-      font-weight:600;
+      margin:0 0 6px; font-size:15px; font-weight:600;
       color:#333;
     }
     .gradient-bar {
-      width:220px;
-      height:10px;
-      background:linear-gradient(
-        to right,
-        #3182bd 0%,
-        #fff 50%,
-        #de2d26 100%
-      );
-      margin-bottom:6px;
-      border:1px solid #aaa;
+      width:220px; height:10px;
+      background:linear-gradient(to right,#3182bd 0%,#fff 50%,#de2d26 100%);
+      margin-bottom:6px; border:1px solid #aaa;
     }
     .legend-labels {
-      display:flex;
-      justify-content:space-between;
-      width:220px;
-      font-size:12px;
-      color:#333;
+      display:flex; justify-content:space-between;
+      width:220px; font-size:12px; color:#333;
     }
   </style>
 </head>
@@ -100,17 +75,17 @@
     <canvas id="chart"></canvas>
   </div>
 
-  <!-- Leaflet JS con SRI y CORS -->
+  <!-- 1) Carga de librerías EXTERNAS (sin defer) -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- 2) Tu código personalizado -->
   <script>
-    // —————— Paso 2: Caché simple para JSON ——————
+    // — Caché simple para JSON —
     const cache = {};
     function fetchOnce(url) {
       if (!cache[url]) {
@@ -123,7 +98,7 @@
       return cache[url];
     }
 
-    // —————— Inicializa Leaflet ——————
+    // — Inicializa Leaflet —
     const mexicoBounds = [[14.5, -118.5], [32.7, -86.7]];
     const map = L.map('map', {
       maxBounds: mexicoBounds,
@@ -136,7 +111,7 @@
       maxZoom: 19
     }).addTo(map);
 
-    // —————— Configuración “profesional” de Chart.js ——————
+    // — Configuración profesional de Chart.js —
     const ctx = document.getElementById('chart').getContext('2d');
     let trendChart = new Chart(ctx, {
       type: 'line',
@@ -144,53 +119,35 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: { padding: { top:20, right:20, bottom:10, left:10 }},
         plugins: {
-          title: {
-            display: true,
-            text: '',
-            font: { size: 16, weight: '600' },
-            padding: { bottom: 10 }
-          },
-          legend: {
-            display: true,
-            position: 'bottom',
-            labels: { usePointStyle: true, padding: 16 }
-          },
-          tooltip: {
-            mode: 'index',
-            intersect: false,
-            padding: 8,
-            titleFont: { size: 14 },
-            bodyFont: { size: 13 }
-          }
+          title:   { display:true, text:'', font:{size:16,weight:'600'}, padding:{bottom:10} },
+          legend:  { display:true, position:'bottom', labels:{usePointStyle:true,padding:16} },
+          tooltip: { mode:'index', intersect:false, padding:8, titleFont:{size:14}, bodyFont:{size:13} }
         },
-        interaction: { mode: 'index', intersect: false },
+        interaction: { mode:'index', intersect:false },
         scales: {
           x: {
-            title: { display: true, text: 'Periodo', font: { size:14, weight:'500' }},
+            title: { display:true, text:'Periodo', font:{size:14,weight:'500'} },
             ticks: { maxRotation:0, autoSkip:true, maxTicksLimit:12 },
-            grid: { color: '#ececec' }
+            grid: { color:'#ececec' }
           },
           y: {
-            title: { display: true, text: 'Temperatura (°C)', font: { size:14, weight:'500' }},
-            ticks: {
-              callback: v => `${v.toFixed(1)}°C`,
-              color: '#333'
-            },
-            grid: { color: '#ececec' }
+            title: { display:true, text:'Temperatura (°C)', font:{size:14,weight:'500'} },
+            ticks: { callback:v=>`${v.toFixed(1)}°C`, color:'#333' },
+            grid: { color:'#ececec' }
+            // sin min/max estáticos aquí
           }
         },
-        animation: { duration: 600 }
+        animation: { duration:600 }
       }
     });
 
     let geojsonLayer, legendControl;
 
-    // —————— Función para recargar mapa y gráfica ——————
+    // — Función que recarga mapa y gráfica —
     function loadData() {
-      const v = document.getElementById('variable-select').value;   // tmax/tmin
-      const a = document.getElementById('agg-select').value;       // annual/monthly
+      const v = document.getElementById('variable-select').value;
+      const a = document.getElementById('agg-select').value;
       const file = `trends_cpc_${v}_${a}.json`;
 
       if (geojsonLayer) map.removeLayer(geojsonLayer);
@@ -198,7 +155,6 @@
 
       fetchOnce(file)
         .then(data => {
-          // Dibuja polígonos con gradiente continuo
           geojsonLayer = L.geoJSON(data, {
             style: f => ({
               fillColor: getColor(f.properties.slope),
@@ -220,36 +176,56 @@
                 mouseout: e => geojsonLayer.resetStyle(e.target),
                 click: e => {
                   map.fitBounds(e.target.getBounds());
-                  const s = f.properties.series;
-                  const xs = s.map(d => d.period);
-                  const ys = s.map(d => d.value);
-                  const idx = ys.map((_,i) => i);
-                  const lr  = linregress(idx, ys);
+                  const s     = f.properties.series;
+                  const xs    = s.map(d => d.period);
+                  const ys    = s.map(d => d.value);
+                  const idx   = ys.map((_,i) => i);
+                  const lr    = linregress(idx, ys);
                   const trend = idx.map(i => lr.intercept + lr.slope * i);
 
-                  // Datos y configuración de la gráfica
+                  // Configura datasets
                   trendChart.data.labels = xs;
                   trendChart.data.datasets = [
                     {
                       label: 'Valor',
                       data: ys,
-                      borderColor: '#007acc',
-                      backgroundColor: 'rgba(0,122,204,0.1)',
-                      pointBackgroundColor: '#fff',
-                      pointBorderColor: '#007acc',
-                      pointRadius: 4,
+                      borderColor: '#888888',
+                      backgroundColor: 'rgba(0,0,0,0)',
+                      pointRadius: 0,
                       tension: 0.2,
-                      fill: true
+                      fill: false
                     },
                     {
                       label: 'Tendencia',
                       data: trend,
+                      slope: lr.slope,
                       borderColor: '#de2d26',
                       borderDash: [6,4],
                       pointRadius: 0,
                       fill: false
                     }
                   ];
+
+                  // Tooltips personalizados
+                  trendChart.options.plugins.tooltip.callbacks = {
+                    title: ctx => `Periodo: ${ctx[0].label}`,
+                    label: ctx => {
+                      if (ctx.dataset.label === 'Tendencia') {
+                        return `Pendiente: ${ctx.dataset.slope.toFixed(3)} °C/año`;
+                      } else {
+                        return `Valor: ${ctx.parsed.y.toFixed(2)} °C`;
+                      }
+                    }
+                  };
+
+                  // Límites dinámicos en Y
+                  const allYs = ys.concat(trend);
+                  const yMin   = Math.min(...allYs);
+                  const yMax   = Math.max(...allYs);
+                  trendChart.options.scales.y.min = yMin - 1;
+                  trendChart.options.scales.y.max = yMax + 1;
+
+                  // Título dinámico y actualización
                   trendChart.options.plugins.title.text =
                     `${f.properties.name} – ${v.toUpperCase()} ${a==='annual'?'Anual':'Mensual'}`;
                   trendChart.update();
@@ -258,8 +234,7 @@
             }
           }).addTo(map);
 
-          // Ajusta límites y añade leyenda de colores
-          map.fitBounds(mexicoBounds);
+          // Leyenda continua
           legendControl = L.control({ position:'bottomright' });
           legendControl.onAdd = () => {
             const div = L.DomUtil.create('div','info legend');
@@ -278,7 +253,7 @@
         .catch(err => console.error('Error cargando JSON:', err));
     }
 
-    // —————— Helpers ——————
+    // — Helpers —
     const MIN = -0.05, MAX = 0.05;
     function getColor(d) {
       let t = Math.min(Math.max((d - MIN)/(MAX - MIN), 0), 1);
@@ -303,9 +278,9 @@
       return { slope, intercept: my - slope*mx };
     }
 
-    // —————— Eventos y carga inicial ——————
+    // Eventos y carga inicial
     document.getElementById('variable-select').addEventListener('change', loadData);
-    document.getElementById('agg-select')    .addEventListener('change', loadData);
+    document.getElementById('agg-select')   .addEventListener('change', loadData);
     loadData();
   </script>
 </body>
