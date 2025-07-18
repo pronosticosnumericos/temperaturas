@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <title>Mapa Interactivo – CPC TMAX/TMIN Anual/Mensual</title>
-  <!-- Leaflet CSS -->
+
+  <!-- Leaflet CSS (sin integrity ni crossorigin) -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-sA+e67TNgj5mZ2D38+UXtZ3eOkpheNTc5pbOxj1Gm2Q="
-    crossorigin=""
   />
+
   <style>
     html, body { height:100vh; margin:0; font-family: sans-serif; }
     body { display:flex; flex-direction:column; }
@@ -83,12 +83,8 @@
     <canvas id="chart"></canvas>
   </div>
 
-  <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-o8N06vXyyTwYxLKA5glwIIdyknN6oNGaEIcE3NK7wWk="
-    crossorigin=""
-  ></script>
+  <!-- Leaflet JS (sin integrity ni crossorigin) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -160,14 +156,12 @@
       const a = document.getElementById('agg-select').value;       // "annual" o "monthly"
       const file = `trends_cpc_${v}_${a}.json`;
 
-      // remuevo capa y leyenda previas
       if (geojsonLayer) map.removeLayer(geojsonLayer);
       if (legendControl) map.removeControl(legendControl);
 
       fetch(file)
         .then(r => r.json())
         .then(data => {
-          // 4) Pinta GeoJSON
           geojsonLayer = L.geoJSON(data, {
             style: f => ({
               fillColor: getColor(f.properties.slope),
@@ -189,13 +183,11 @@
                 mouseout: e => geojsonLayer.resetStyle(e.target),
                 click: e => {
                   map.fitBounds(e.target.getBounds());
-                  // 5) Actualiza gráfico con serie + trend
                   const s = f.properties.series;
                   const xs = s.map(d => d.period);
                   const ys = s.map(d => d.value);
                   const n  = ys.length;
                   const idx = Array.from({ length: n }, (_, i) => i);
-                  // calculo simple de slope/intercept
                   const lr = linregress(idx, ys);
                   const trend = idx.map(i => lr.intercept + lr.slope * i);
 
@@ -250,7 +242,7 @@
         .catch(err => console.error('Error cargando JSON:', err));
     }
 
-    // helper color y linregress en JS
+    // helper: color y regresión en JS
     const MIN = -0.05, MAX = 0.05;
     function getColor(d) {
       let t = Math.min(Math.max((d - MIN)/(MAX - MIN), 0), 1);
@@ -277,13 +269,12 @@
       let num=0, den=0;
       for(let i=0;i<n;i++){
         num += (x[i]-mx)*(y[i]-my);
-        den += Math.pow(x[i]-mx,2);
+        den += (x[i]-mx)**2;
       }
       const slope = num/den;
       return { slope, intercept: my - slope*mx };
     }
 
-    // event listeners
     document.getElementById('variable-select').addEventListener('change', loadData);
     document.getElementById('agg-select').addEventListener('change', loadData);
 
