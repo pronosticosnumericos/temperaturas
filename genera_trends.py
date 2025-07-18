@@ -28,7 +28,7 @@ import geopandas as gpd
 # ——————————————
 DATA_DIR   = "/home/sig07/brisia_mapas"
 SHAPEFILE  = f"{DATA_DIR}/dest_2015gw.shp"
-YEARS      = list(range(1979, 1981))
+YEARS      = list(range(1979, 2026))
 NAME_COL   = "NOM_ENT"     # Nombre del campo con el estado
 VARS       = ["tmax", "tmin"]
 # ——————————————
